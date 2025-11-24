@@ -2,6 +2,10 @@ import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
+if (!MONGODB_URI) {
+    throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+}
+
 declare global {
     var mongooseCache: {
         conn: typeof mongoose | null;
@@ -9,23 +13,35 @@ declare global {
     };
 }
 
-let cached = global.mongooseCache;
+const cached = global.mongooseCache || { conn: null, promise: null };
 
-if (!cached) {
-    cached = global.mongooseCache = { conn: null, promise: null };
+if (!global.mongooseCache) {
+    global.mongooseCache = cached;
 }
 
 export const connectToDatabase = async () => {
-    if (!MONGODB_URI) {
-        throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
-    }
-
     if (cached.conn) {
         return cached.conn;
     }
 
     if (!cached.promise) {
-        cached.promise = mongoose.connect(MONGODB_URI, { bufferCommands: false });
+        const opts = {
+            bufferCommands: false,
+            maxPoolSize: 10,
+            serverSelectionTimeoutMS: 10000, // Increased from 5000 to 10000ms
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 10000, // Add connection timeout
+            family: 4, // Force IPv4 to avoid IPv6 DNS issues
+        };
+
+        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+            console.log(`✅ Connected to MongoDB ${process.env.NODE_ENV}`);
+            return mongoose;
+        }).catch((error) => {
+            console.error('❌ MongoDB connection error:', error.message);
+            cached.promise = null;
+            throw error;
+        });
     }
 
     try {
@@ -35,6 +51,5 @@ export const connectToDatabase = async () => {
         throw error;
     }
 
-    console.log(`connected to db ${process.env.NODE_ENV} - ${MONGODB_URI}`)
     return cached.conn;
 }

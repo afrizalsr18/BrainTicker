@@ -9,28 +9,28 @@ export const getAuth = async () => {
     if (authInstance) return authInstance;
 
     const mongoose = await connectToDatabase();
-   const db = mongoose.connection.db;
+    const db = mongoose.connection.db;
 
-   if(!db) {
-    throw new Error("Failed to connect to database");
-   }
+    if (!db) {
+        throw new Error("Failed to connect to database");
+    }
 
-   authInstance = betterAuth({
-    database: mongodbAdapter(db as any),
-    secret : process.env.BETTER_AUTH_SECRET,
-    baseURL: process.env.BETTER_AUTH_URL,
-    emailAndPassword: {
-        enabled: true,
-        disableSignUp: false,
-        requireEmailVerification: false,
-        minPasswordLength: 8,
-        maxPasswordLength: 64,
-        autoSignIn: true,
-    },
-    plugins: [nextCookies()],
-   });
+    authInstance = betterAuth({
+        database: mongodbAdapter(db as any),
+        secret: process.env.BETTER_AUTH_SECRET,
+        baseURL: process.env.BETTER_AUTH_URL,
+        emailAndPassword: {
+            enabled: true,
+            disableSignUp: false,
+            requireEmailVerification: false,
+            minPasswordLength: 8,
+            maxPasswordLength: 64,
+            autoSignIn: true,
+        },
+        plugins: [nextCookies()],
+    });
 
-   return authInstance;
+    return authInstance;
 };
 
 export const auth = await getAuth();
